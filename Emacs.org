@@ -51,7 +51,7 @@
 
 #+end_src
 
-* Org-mode stuff
+* Org-mode related
 ** Initialization
 #+begin_src emacs-lisp
   (require 'org)

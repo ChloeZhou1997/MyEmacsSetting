@@ -1,3 +1,9 @@
-#Ignore the .file directory
+# Ignore the .file directory
 
 .files/
+
+# Ignore gitignore itself
+.gitignore
+
+#ignore trash file
+*[#]*[#]
