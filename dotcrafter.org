@@ -1,0 +1,452 @@
+#+TITLE: Lisp Project
+#+AUTHOR: Chloe
+#+PROPERTY: header-args :emacs-lisp :tangle ~/.dotfiles/.files/.emacs.d/dotcrafter.el
+
+
+* Customizable function
+Use ~move-folder-to-config-files~ to move config folders into the
+~/.dotfiles~
+
+Use ~move-file-to-config-files~ to move config files into the ~/.dotfiles~
+
+Use ~link-config-files~ to create symblink between the config files in
+the ~/.dotfiles~ and the ~home-directory~
+
+
+* Define folders and files path
+See: [[file:variable-and-scope.org::*Defining customization variables][Defining customization variables]]
+
+#+begin_src emacs-lisp 
+
+	(defcustom dotcrafter-dotfiles-folder "~/.dotfiles"
+		"The folder where dotfiles and org-mode configuration files are stored."
+		:type 'directory
+		:group 'dotfiles)
+
+	(defcustom dotfiles-org-files '("dotcrafter.org")
+		"The list of org-mode files under the `dotfiles-folder' which
+	contain configuration files that should be tangled"
+		:type '(list string)
+		:group 'dotfiles)
+
+#+end_src
+
+#+RESULTS:
+: dotfiles-org-files
+
+** Resolve path
+we can use these functions to find *where a file inside of the dotfiles folder should be linked in the home
+directory.*
+
+- find the relative path of a file under ~/.dotfile~ relative to the
+  actual folder
+- find the relative path of the ~/.dotfile/file~ against the output
+  directory, (usually the home directory).
+
+
+#+begin_src emacs-lisp
+
+		(defcustom dotcrafter-output-directory "~"
+			"The directory where dotcrafter.el will write out your dotfiles.
+		This ia typically set to the home directory but can be changed for
+		testing purposes."
+			:type 'string
+			:group 'dotfiles)
+
+		(defcustom dotcrafter-config-files-directory ".files"
+			"The directory path inside of '~/.dotfiles' where configuration
+		files should be symbolically linked are stored"
+			:type 'string
+			:group 'dotfiles)
+
+		(defun dotcrafter--resolve-config-files-path()
+			"The function gives the full path of the given file relative to 
+	the ~/.dotfile folder"
+						(expand-file-name dotcrafter-config-files-directory
+															dotcrafter-dotfiles-folder))
+
+		(defun resolve-config-file-target(config-file)
+			"Get the path of each each directory and file in the
+	relative to the corresponding ~/.dotfiles location"
+			(expand-file-name
+			 (file-relative-name
+				 (expand-file-name config-file)
+				 (resolve-config-files-path))
+			 output-directory))
+
+#+end_src
+
+#+RESULTS:
+: resolve-config-file-target
+
+** Creating expected directories before linking
+:PROPERTIES:
+:ID:       BF6681EF-5E6D-49A5-B511-0CC562A39291
+:END:
+
+When we start to create symbolic links into the home directory (where
+the config file should be, usually), one caveat is when creating
+symlink too close to the home directory and commonly used in unix
+system (e.g. ~~/.config~). (If these folders do not prexist, the program
+will create symbolic link for these folders as well...?)
+
+Solution: create these files at first to avoid the problem all at
+once.
+
+#+begin_src emacs-lisp
+
+	(defcustom dotcrafter-ensure-output-directories '(".config" ".zshrc" ".emacs.d")
+		"list of directories in the output folder that should be created
+	 before linking configuration files."
+		:type '(list string)
+		:group 'dotfiles)
+
+	(defun dotcrafter-ensure-output-directories ()
+		;; Ensure that the expected output directories are already
+		;; created so that links will be created inside
+		(dolist (dir dotcrafter-ensure-output-directories)
+			(make-directory (expand-file-name dir output-directory) t)))
+
+	(dotcrafter-ensure-output-directories)
+#+end_src
+
+#+RESULTS:
+
+* Function 
+
+** auto-tangle
+
+See: [[file:functions.org::*Interactive function (Command)][Interactive function (Command)]]
+
+Define a command that automaticaly tangle the `.org` files in your
+dotfiles folder (this is used in the last section of the file 
+[[*From ~creating-minor-mode.org~][From ~creating-minor-mode.org~]] .
+
+Goal: creatingminor mode to
+- automatically tangle and update configuration target files for ANY
+  Org Mode file lives inside of the dotfiles folder
+- the tangle setting in my init config [[file:~/.dotfiles/.files/.emacs.d/Myinit.org::*Auto Tangle][Auto Tangle]]
+
+
+#+begin_src emacs-lisp
+
+		(defcustom dotcrafter-tangle-on-save t
+			"When t, automatically tangle Org files on save"
+			:type 'boolean
+			:group 'dotfiles)
+
+
+		(defun dotcrafter-tangle-org-file (&optional org-file)
+			"Tangle .org file relative to the path in dotfiles-folder.
+		If no file is specified, tangle the current file if it's an
+		org-mode buffer inside of dotfile-folder"
+			(interactive)
+			(let ((org-confirm-babel-evaluate nil)) 
+				(message "The org-file name is: %s" org-file)
+				(org-babel-tangle-file (expand-file-name org-file dotcrafter-dotfiles-folder))
+				(dotcrafter-link-config-files)))
+	;; The dotcrafter-link-config-files is very inefficient! TODO!
+
+		(defun dotcrafter-tangle-org-files ()
+			"Tangles all of the .org files in the paths specified by the variable dotcrafter-dotfiles-folder"
+			(interactive)
+			(dolist (org-file dotfiles-org-files)
+				(dotfiles-tangle-org-file org-file))
+			(message "Dotfiles are up to date!"))
+
+
+#+end_src
+
+#+RESULTS:
+: dotcrafter-tangle-org-files
+
+
+#+begin_src emacs-lisp
+
+	(dotcrafter-tangle-org-file buffer-file-name)
+
+
+#+end_src
+
+** auto-add-to-gitignore
+
+#+begin_src emacs-lisp
+
+	(defvar dotcrafter-gitignore-marker "\n# -- Generated by dotcrafter.el! --\n\n"
+		"The marker string to be placed in the .gitignore file of the
+	dotfiles repo to indicate where the auto-generated list of ignored files begins")
+
+	(defun dotcrafter-scan-for-output-files (org-file)
+		(let ((output-files '())
+					(current-match t))
+			;;Get a buffer for the file. If the file has already opened
+			;;in the buffer, get the buffer; if not, open the file in 
+			;;the buffer first then obtain the buffer id.
+			(with-current-buffer (or (get-file-buffer org-file)
+															 (find-file-noselect org-file)) 
+				;;save the current buffer position
+				(save-excursion
+					;;back to the beginning of the buffer
+					(goto-char (point-min))
+
+					;;Loop until no more matches are found
+					(while current-match 
+						;;search for block with a :tangle property
+						(setq current-match (search-forward ":tangle " nil t))
+						(when current-match
+							(let ((output-file (thing-at-point 'filename t)))
+								;; If a file path was found, add it to the list
+								(unless (or (not output-file)
+														(string-equal output-file "no"))
+									(setq output-files (cons output-file
+																					 output-files))))))))
+			output-files))
+
+	(defun dotcrafter--update-gitignore ()
+		(let ((output-files '()))
+			;; Gather the list of output files from all Org files
+			(dolist (org-file dotcrafter-org-files)
+				(setq output-files
+							(append output-files
+											(dotcrafter--scan-for-output-files
+											 (expand-file-name org-file dotcrafter-dotfiles-folder)))))
+
+			;; Now that we have the output files, update the .gitignore file
+			(let ((gitignore-file (expand-file-name ".gitignore"
+																							dotcrafter-dotfiles-folder)))
+				;; Find the .gitignore buffer and prepare for editing
+				(with-current-buffer (or (get-file-buffer gitignore-file)
+																 (find-file-noselect gitignore-file))
+					(save-excursion
+						;; Find or insert the dotcrafter-gitignore-marker
+						(beginning-of-buffer)
+						(or (progn
+									(search-forward dotcrafter-gitignore-marker nil t))
+								(progn
+									(end-of-buffer)
+									(insert "\n" dotcrafter-gitignore-marker)))
+
+						;; Delete the rest of the buffer after the marker
+						(delete-region (point) (point-max))
+
+						;; Insert a line for each output file
+						(dolist (output-file output-files)
+							(insert output-file "\n"))
+
+						;; Make sure the buffer is saved
+						(save-buffer))))))
+#+end_src
+
+#+RESULTS:
+: dotcrafter--update-gitignore
+
+** update dotfiles
+
+#+begin_src emacs-lisp
+
+(defun dotcrafter-update-dotfiles ()
+  "Generate and link configuration files to the output directory.
+This command handles the full process of \"tangling\" Org Mode
+files containing configuration blocks and creating symbolic links
+to those configuration files in the output directory, typically
+the user's home directory."
+  (interactive)
+  (dotcrafter-tangle-org-files)
+  (dotcrafter-link-config-files)
+  (dotcrafter--update-gitignore))
+
+#+end_src
+
+#+RESULTS:
+: dotcrafter-update-dotfiles
+
+** minding the list of all configuration files to be linked (not used in minor mode)
+:PROPERTIES:
+:ID:       5B0E5715-1E4F-4F3C-A480-8960B5ADA067
+:END:
+
+Goal: mirror the configuration files in ~~/.dotfiles~ into the home
+folder using symbolic link.
+
+Solution: Based on [[file:reading-and-writing-buffers.org::*Listing files in directories][Listing files in directories]], list all the linkable
+files under ~~/.dotfiles~
+
+#+begin_src emacs-lisp
+
+		(defun dotcrafter-find-all-files-to-link()
+			(let ((file-to-link 
+						 (directory-files-recursively
+							(resolve-config-files-path) 
+							"")))
+				(progn
+					(message "file-to-link: %s" file-to-link)
+					(dolist (file file-to-link)
+						(message "File:%s\n			- %s" file (resolve-config-file-target file))))))
+
+#+end_src
+
+#+RESULTS:
+: dotcrafter-find-all-files-to-link
+
+** migrating/move config files to the dotfiles folder
+
+- Migrating folders or files under home dir (~output-directory~) to the
+  ~.dotfiles~ diretory.
+- Move the file to the corresponding location under the config path
+- parameter ~D~ allows for pass folder as input argument, ~F~ allows for
+  passing files as input argument.
+	- [[https://www.gnu.org/software/emacs/manual/html_node/elisp/Interactive-Codes.html][Code Character for interactive]]
+- [] in the tutorial, ~F~ is enough to allow both folder path and file
+  path to be input, not in my case through ... have to use both ~D~ and
+  ~F~ in order for the function to work.
+
+#+begin_src emacs-lisp
+
+	(defun dotcrafter-move-folder-to-config-files (&optional source-path)
+		(interactive "DConfiguration path to move:")
+		(let* 
+				((relative-path (file-relative-name (expand-file-name source-path)
+																						output-directory))
+				 (dest-path (expand-file-name relative-path
+																			(resolve-config-files-path)))
+				 (dest-path (if (string-suffix-p "/" dest-path)
+												(substring dest-path 0 -1)
+											dest-path))) 
+			(when(string-prefix-p ".." relative-path)
+				(error "Copied path is not inside of config output directory :%s" output-directory))
+			(when(file-exists-p dest-path)
+				(error "Can't copy path because it already exists in the config directory: %s" dest-path))
+
+			(make-directory (file-name-directory dest-path) t)
+			(rename-file source-path dest-path)))
+
+	(defun dotcrafter-move-file-to-config-files (&optional source-path)
+		(interactive "fConfiguration path to move:")
+		(let* 
+				((relative-path (file-relative-name (expand-file-name source-path)
+																						output-directory))
+				 (dest-path (expand-file-name relative-path
+																			(resolve-config-files-path)))
+				 (dest-path (if (string-suffix-p "/" dest-path)
+												(substring dest-path 0 -1)
+											dest-path))) 
+			(when(string-prefix-p ".." relative-path)
+				(error "Copied path is not inside of config output directory :%s" output-directory))
+			(when(file-exists-p dest-path)
+				(error "Can't copy path because it already exists in the config directory: %s" dest-path))
+
+			(make-directory (file-name-directory dest-path) t)
+			(rename-file source-path dest-path)))
+#+end_src
+
+#+RESULTS:
+: dotcrafter-move-file-to-config-files
+
+** Creating symblink for all config files
+
+Create symblink at the optimal level in home dir so no need to create
+a link for every single file 0.0.
+
+1. Recursively looping over the ~~/.dotfiles/~ 
+2. File any given file, break the path into pieces (identifier "~/~")
+3. Check whether each piece exists (iteratively)
+4. Check if a symblink exists for each piece, pointing to the ~output-directory~
+5. Create the symblink if it doesn't exists
+
+
+- ~dotcrafter-link-config-files~ : link the whole config dir
+- ~link-config-file~ : link every inidividual files (inside of the dir)
+
+#+begin_src emacs-lisp
+
+	(defun dotcrafter--link-config-file (config-file)
+		(let* ((path-parts 
+						(split-string (file-relative-name (expand-file-name config-file)
+																							(dotcrafter--resolve-config-files-path))
+													"/" t))
+					 (current-path nil))
+
+			(while path-parts
+				(setq current-path (if current-path
+															 (concat current-path "/" (car path-parts))
+														 (car path-parts)))
+				(setq path-parts (cdr path-parts))
+
+
+				;; Whether need to create a symblink between the current source path to the target path
+				(let ((source-path (expand-file-name (concat config-files-directory "/" current-path)
+																						 dotcrafter-dotfiles-folder))
+							(target-path (expand-file-name current-path output-directory)))
+
+					;; First, if the file exists, if it's a symblink
+					(if (file-symlink-p target-path)
+							(progn 
+								(message "The source path is a string %s" source-path)
+								;;check if the symblink target to the source path
+								(if (string-equal source-path (file-truename target-path))
+										;;stop looping
+										(setq path-parts '())
+									(error "The targeted file/folder %s is a symblink of a different source file" target-path)))
+						;; if the file/folder exists, but doesn't have a symblink
+						;; if it's a file, creat symblink
+						;; if it's a folder, keep looping
+						(when (not (file-directory-p target-path))
+							(make-symbolic-link source-path target-path)
+							(setq path-parts '())))))))
+
+	(defun dotcrafter-link-config-files()
+		(interactive)
+		(let ((config-files 
+					 (directory-files-recursively (dotcrafter--resolve-config-files-path) "")))
+			;;ensure the expected output folders are created;
+			(dolist (dir dotcrafter-ensure-output-directories)
+				(make-directory (expand-file-name dir dotcrafter-output-directory) t))
+
+			(dolist (file config-files)
+				(dotcrafter--link-config-file file))))
+
+	(dotcrafter-link-config-files)
+#+end_src
+
+#+RESULTS:
+
+
+
+#+begin_src emacs-lisp
+
+	(defcustom dotcrafter-keymap-prefix "C-c C-,"
+		"The prefix for dotcrafter-mode key bindings."
+		:type 'string
+		:group 'dotfiles)
+
+	(defun dotcrafter--org-mode-hook ()
+		(add-hook 'after-save-hook #'dotcrafter--after-save-handler nil t))
+
+	(defun dotcrafter--after-save-handler ()
+		(when (and dotcrafter-mode
+							 dotcrafter-tangle-on-save
+							 (member (file-name-nondirectory buffer-file-name) dotfiles-org-files)
+							 (string-equal (directory-file-name (file-name-directory (buffer-file-name)))
+														 (directory-file-name (expand-file-name dotcrafter-dotfiles-folder))))
+			(message "Tangling %s..." (file-name-nondirectory buffer-file-name))
+			(dotcrafter-tangle-org-file buffer-file-name)))
+
+	(defun dotcrafter--key (key)
+		(kbd (concat dotcrafter-keymap-prefix " " key)))
+
+	(define-minor-mode dotcrafter-mode
+		"Toggles global dotcrafter-mode"
+		nil
+		:global t
+		:group 'dotfiles
+		:lighter " dotcrafter"
+		:keymap
+		(list (cons (dotcrafter--key "t") #'dotcrafter-tangle-org-file)
+					(cons (dotcrafter--key "u") #'dotcrafter-update-dotfiles))
+		(if dotcrafter-mode
+				(add-hook 'org-mode-hook #'dotcrafter--org-mode-hook)
+			(remove-hook 'org-mode-hook #'dotcrafter--org-mode-hook)))
+
+(provide 'dotcrafter)
+
+#+end_src
