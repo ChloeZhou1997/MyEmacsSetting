@@ -23,16 +23,13 @@ See: [[file:variable-and-scope.org::*Defining customization variables][Defining 
 		:type 'directory
 		:group 'dotfiles)
 
-	(defcustom dotfiles-org-files '("dotcrafter.org")
+	(defcustom dotcrafter-org-files '("dotcrafter.org" "Emacs.org")
 		"The list of org-mode files under the `dotfiles-folder' which
 	contain configuration files that should be tangled"
 		:type '(list string)
 		:group 'dotfiles)
 
 #+end_src
-
-#+RESULTS:
-: dotfiles-org-files
 
 ** Resolve path
 we can use these functions to find *where a file inside of the dotfiles folder should be linked in the home
@@ -72,7 +69,7 @@ directory.*
 			 (file-relative-name
 				 (expand-file-name config-file)
 				 (resolve-config-files-path))
-			 output-directory))
+			 dotcrafter-output-directory))
 
 #+end_src
 
@@ -105,7 +102,7 @@ once.
 		;; Ensure that the expected output directories are already
 		;; created so that links will be created inside
 		(dolist (dir dotcrafter-ensure-output-directories)
-			(make-directory (expand-file-name dir output-directory) t)))
+			(make-directory (expand-file-name dir dotcrafter-output-directory) t)))
 
 	(dotcrafter-ensure-output-directories)
 #+end_src
@@ -135,7 +132,6 @@ Goal: creatingminor mode to
 			:type 'boolean
 			:group 'dotfiles)
 
-
 		(defun dotcrafter-tangle-org-file (&optional org-file)
 			"Tangle .org file relative to the path in dotfiles-folder.
 		If no file is specified, tangle the current file if it's an
@@ -151,22 +147,12 @@ Goal: creatingminor mode to
 			"Tangles all of the .org files in the paths specified by the variable dotcrafter-dotfiles-folder"
 			(interactive)
 			(dolist (org-file dotfiles-org-files)
-				(dotfiles-tangle-org-file org-file))
+				(dotcrafter-tangle-org-file org-file))
 			(message "Dotfiles are up to date!"))
 
 
 #+end_src
 
-#+RESULTS:
-: dotcrafter-tangle-org-files
-
-
-#+begin_src emacs-lisp
-
-	(dotcrafter-tangle-org-file buffer-file-name)
-
-
-#+end_src
 
 ** auto-add-to-gitignore
 
@@ -237,9 +223,6 @@ Goal: creatingminor mode to
 						(save-buffer))))))
 #+end_src
 
-#+RESULTS:
-: dotcrafter--update-gitignore
-
 ** update dotfiles
 
 #+begin_src emacs-lisp
@@ -290,7 +273,7 @@ files under ~~/.dotfiles~
 
 ** migrating/move config files to the dotfiles folder
 
-- Migrating folders or files under home dir (~output-directory~) to the
+- Migrating folders or files under home dir (~dotcrafter-output-directory~) to the
   ~.dotfiles~ diretory.
 - Move the file to the corresponding location under the config path
 - parameter ~D~ allows for pass folder as input argument, ~F~ allows for
@@ -306,14 +289,14 @@ files under ~~/.dotfiles~
 		(interactive "DConfiguration path to move:")
 		(let* 
 				((relative-path (file-relative-name (expand-file-name source-path)
-																						output-directory))
+																						dotcrafter-output-directory))
 				 (dest-path (expand-file-name relative-path
 																			(resolve-config-files-path)))
 				 (dest-path (if (string-suffix-p "/" dest-path)
 												(substring dest-path 0 -1)
 											dest-path))) 
 			(when(string-prefix-p ".." relative-path)
-				(error "Copied path is not inside of config output directory :%s" output-directory))
+				(error "Copied path is not inside of config output directory :%s" dotcrafter-output-directory))
 			(when(file-exists-p dest-path)
 				(error "Can't copy path because it already exists in the config directory: %s" dest-path))
 
@@ -324,14 +307,14 @@ files under ~~/.dotfiles~
 		(interactive "fConfiguration path to move:")
 		(let* 
 				((relative-path (file-relative-name (expand-file-name source-path)
-																						output-directory))
+																						dotcrafter-output-directory))
 				 (dest-path (expand-file-name relative-path
 																			(resolve-config-files-path)))
 				 (dest-path (if (string-suffix-p "/" dest-path)
 												(substring dest-path 0 -1)
 											dest-path))) 
 			(when(string-prefix-p ".." relative-path)
-				(error "Copied path is not inside of config output directory :%s" output-directory))
+				(error "Copied path is not inside of config output directory :%s" dotcrafter-output-directory))
 			(when(file-exists-p dest-path)
 				(error "Can't copy path because it already exists in the config directory: %s" dest-path))
 
@@ -350,7 +333,7 @@ a link for every single file 0.0.
 1. Recursively looping over the ~~/.dotfiles/~ 
 2. File any given file, break the path into pieces (identifier "~/~")
 3. Check whether each piece exists (iteratively)
-4. Check if a symblink exists for each piece, pointing to the ~output-directory~
+4. Check if a symblink exists for each piece, pointing to the ~dotcrafter-output-directory~
 5. Create the symblink if it doesn't exists
 
 
@@ -374,9 +357,9 @@ a link for every single file 0.0.
 
 
 				;; Whether need to create a symblink between the current source path to the target path
-				(let ((source-path (expand-file-name (concat config-files-directory "/" current-path)
+				(let ((source-path (expand-file-name (concat dotcrafter-config-files-directory "/" current-path)
 																						 dotcrafter-dotfiles-folder))
-							(target-path (expand-file-name current-path output-directory)))
+							(target-path (expand-file-name current-path dotcrafter-output-directory)))
 
 					;; First, if the file exists, if it's a symblink
 					(if (file-symlink-p target-path)
@@ -408,10 +391,6 @@ a link for every single file 0.0.
 	(dotcrafter-link-config-files)
 #+end_src
 
-#+RESULTS:
-
-
-
 #+begin_src emacs-lisp
 
 	(defcustom dotcrafter-keymap-prefix "C-c C-,"
@@ -425,7 +404,7 @@ a link for every single file 0.0.
 	(defun dotcrafter--after-save-handler ()
 		(when (and dotcrafter-mode
 							 dotcrafter-tangle-on-save
-							 (member (file-name-nondirectory buffer-file-name) dotfiles-org-files)
+							 (member (file-name-nondirectory buffer-file-name) dotcrafter-org-files)
 							 (string-equal (directory-file-name (file-name-directory (buffer-file-name)))
 														 (directory-file-name (expand-file-name dotcrafter-dotfiles-folder))))
 			(message "Tangling %s..." (file-name-nondirectory buffer-file-name))
@@ -450,3 +429,6 @@ a link for every single file 0.0.
 (provide 'dotcrafter)
 
 #+end_src
+
+#+RESULTS:
+: dotcrafter
