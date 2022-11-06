@@ -2,7 +2,6 @@
 #+AUTHOR: Chloe
 #+PROPERTY: header-args :emacs-lisp :tangle ~/.dotfiles/.files/.emacs.d/dotcrafter.el
 
-
 * Customizable function
 Use ~move-folder-to-config-files~ to move config folders into the
 ~/.dotfiles~
@@ -30,6 +29,9 @@ See: [[file:variable-and-scope.org::*Defining customization variables][Defining 
 		:group 'dotfiles)
 
 #+end_src
+
+#+RESULTS:
+: dotcrafter-org-files
 
 ** Resolve path
 we can use these functions to find *where a file inside of the dotfiles folder should be linked in the home
@@ -92,7 +94,7 @@ once.
 
 #+begin_src emacs-lisp
 
-	(defcustom dotcrafter-ensure-output-directories '(".config" ".zshrc" ".emacs.d")
+	(defcustom dotcrafter-ensure-output-directories '(".config" ".emacs.d")
 		"list of directories in the output folder that should be created
 	 before linking configuration files."
 		:type '(list string)
@@ -146,13 +148,12 @@ Goal: creatingminor mode to
 		(defun dotcrafter-tangle-org-files ()
 			"Tangles all of the .org files in the paths specified by the variable dotcrafter-dotfiles-folder"
 			(interactive)
-			(dolist (org-file dotfiles-org-files)
+			(dolist (org-file dotcrafter-org-files)
 				(dotcrafter-tangle-org-file org-file))
 			(message "Dotfiles are up to date!"))
 
 
 #+end_src
-
 
 ** auto-add-to-gitignore
 
@@ -222,6 +223,9 @@ Goal: creatingminor mode to
 						;; Make sure the buffer is saved
 						(save-buffer))))))
 #+end_src
+
+#+RESULTS:
+: dotcrafter--update-gitignore
 
 ** update dotfiles
 
@@ -428,7 +432,5 @@ a link for every single file 0.0.
 
 (provide 'dotcrafter)
 
-#+end_src
 
-#+RESULTS:
-: dotcrafter
+#+end_src
