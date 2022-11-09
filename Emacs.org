@@ -1,4 +1,8 @@
 #+STARTUP: content
+#+SEQ_TODO: TODO(t) ONWATCH(o@/!) REVIEW(r@/!) | DONE(d@/!) CANCELLED(c@/!)
+#+TAGS: @download(p) @emacs(e) @review(r) @design(d)
+#+PROPERTY: header-args :emacs-lisp :tangle ~/.dotfiles/.files/.emacs.d/init.el
+
 #+TITLE: Emacs Configuration
 #+AUTHOR: Chloe
 #+DATE: 2022-10-29
@@ -8,9 +12,6 @@
 #+hugo_weight: auto
 #+HUGO_DRAFT: false
 #+hugo_auto_set_lastmod: t
-#+SEQ_TODO: TODO(t) ONWATCH(o@/!) REVIEW(r@/!) | DONE(d@/!) CANCELLED(c@/!)
-#+TAGS: @download(p) @emacs(e) @review(r) @design(d)
-#+PROPERTY: header-args :emacs-lisp :tangle ~/.dotfiles/.files/.emacs.d/init.el
 
 This is the Emacs configuration built from scratch following [[https://www.youtube.com/watch?v=74zOY-vgkyw&list=PLEoMzSkcN8oPH1au7H6B7bBJ4ZO7BXjSZ&index=1&t=0s][system crafter]]
 and [[https://www.youtube.com/watch?v=49kBWM3RQQ8&list=PL9KxKa8NpFxIcNQa9js7dQQIHc81b0-Xg][Mike Zamansky]]'s youtube videos. As someone with only limited
@@ -68,6 +69,9 @@ Few most common keywords:
 (setq package-archives '(("melpa" . "https://melpa.org/packages/")
 			 ("org" . "https://orgmode.org/elpa/")
 			 ("elpa" . "https://elpa.gnu.org/packages/")))
+
+(add-to-list 'package-archives
+             '("melpa-stable" . "https://stable.melpa.org/packages/") t)
 
 (package-initialize)
 (unless package-archive-contents
@@ -135,8 +139,8 @@ like tool bar and scroll bar.
 #+begin_src emacs-lisp
 
 ;; Opening frame
-(add-to-list 'default-frame-alist '(height . 200))
-(add-to-list 'default-frame-alist '(width . 200))
+(add-to-list 'default-frame-alist '(height . 100))
+(add-to-list 'default-frame-alist '(width . 100))
 
 ;;set the option and command key to corresponding emacs key
 (setq mac-command-modifier      'meta
@@ -456,13 +460,6 @@ There are other completion system which will be configured later.
 (setq yas/prompt-functions '(yas/popup-isearch-prompt yas/no-prompt))
 #+end_src
 ** Keys Bindings
-*** Global Key Bindings
-#+begin_src emacs-lisp
-  (global-set-key (kbd "<f5>") 'revert-buffer)
-  (global-set-key (kbd "<escape>") 'keyboard-escape-quit)
-  (global-set-key (kbd "C-M-j") 'counsel-switch-buffer)
-#+end_src
-
 *** Which-key
 which-key is  a useful UI panel  that appears when you  start pressing
 any key binding in Emacs to offer you all possible completions for the
@@ -474,12 +471,9 @@ your current buffer.
 
   #+BEGIN_SRC emacs-lisp
     (use-package which-key
-      :ensure t
       :config (which-key-mode))
   #+END_SRC
 
-	#+RESULTS:
-	: t
 ** Misc packages
 #+begin_src emacs-lisp
   ; Becon mode
@@ -535,12 +529,18 @@ global key bindings.
 
 #+end_src
 
-Add bullet heading style 
+*** Beautify org roam
 
 #+begin_src emacs-lisp
 (use-package org-bullets
-	:config
-	(add-hook 'org-mode-hook (lambda () (org-bullets-mode 1))))
+	:hook
+	(org-mode . (lambda () (org-bullets-mode 1)))
+	(org-mode . (lambda ()
+              "Beautify Org Checkbox Symbol"
+              (push '("[ ]" . "☐" ) prettify-symbols-alist)
+              (push '("[X]" . "☑" ) prettify-symbols-alist)
+              (push '("[-]" . "⊡" ) prettify-symbols-alist)
+              (prettify-symbols-mode))))
 #+end_src
 
 *** Font and List
@@ -557,10 +557,10 @@ The org-font-setup setup the font and also the list style at the end.
 										 (org-level-2 . 1.1)
 										 (org-level-3 . 1.05)
 										 (org-level-4 . 1.0)
-										 (org-level-5 . 1.1)
-										 (org-level-6 . 1.1)
-										 (org-level-7 . 1.1)
-										 (org-level-8 . 1.1)))
+										 (org-level-5 . 0.8)
+										 (org-level-6 . 0.8)
+										 (org-level-7 . 0.8)
+										 (org-level-8 . 0.8)))
 			 (set-face-attribute (car face) nil :font "Fira Code" :weight 'regular :height (cdr face)))
 
 		 ;; Ensure that anything that should be fixed-pitch in Org files appears that way
@@ -573,10 +573,13 @@ The org-font-setup setup the font and also the list style at the end.
 		 (set-face-attribute 'org-checkbox nil :inherit 'fixed-pitch)
 
 		 (setq org-ellipsis " ▼"
-				 org-hide-emphasis-markers t))
+					 org-hide-emphasis-markers t))
 
 	 (add-hook 'org-mode-hook 'org-font-setup)
    #+end_src
+
+	 #+RESULTS:
+	 | org-mode-export-hook | (lambda nil (add-hook 'after-save-hook #'efs/org-babel-tangle-config)) | org-ref-org-menu | org-pdftools-setup-link | org-tempo-setup | (lambda nil Beautify Org Checkbox Symbol (setq prettify-symbols-alist (cons '([ ] . ☐) prettify-symbols-alist)) (setq prettify-symbols-alist (cons '([X] . ☑) prettify-symbols-alist)) (setq prettify-symbols-alist (cons '([-] . ⊡) prettify-symbols-alist)) (prettify-symbols-mode)) | (lambda nil (org-bullets-mode 1)) | turn-on-visual-line-mode | org-font-setup | er/add-org-mode-expansions | my-org-mode-hook | #[0 \301\211\207 [imenu-create-index-function org-imenu-get-tree] 2] | turn-on-auto-fill | #[0 \300\301\302\303\304$\207 [add-hook change-major-mode-hook org-show-all append local] 5] | #[0 \300\301\302\303\304$\207 [add-hook change-major-mode-hook org-babel-show-result-all append local] 5] | org-babel-result-hide-spec | org-babel-hide-all-hashes |
 	 
 ** Babel Setting
 #+begin_src emacs-lisp
@@ -622,7 +625,7 @@ The org-font-setup setup the font and also the list style at the end.
 
 #+RESULTS:
 
-** Strcture Template
+*** Strcture Template
 #+begin_src emacs-lisp
 
 ;;quick parser
@@ -862,10 +865,7 @@ This integrate directly with Org-Roam:
   (require 'org-ref)) ; optional: if using Org-ref v2 or v3 citation links
 #+end_src
 
-#+RESULTS:
-: t
-
-Configuring for templates integrating with org-noter:
+**** Templates integrating with bibtex
 
 #+begin_src emacs-lisp
 
@@ -923,6 +923,32 @@ For the PDF Scrapper, change the formate of the paper key:
 (setq orb-autokey-format "%a%T[3]%y")
 #+end_src
 
+*** Org-roam-graph
+#+begin_src emacs-lisp
+;;Setting for MacOS
+(setq org-roam-graph-viewer
+    (lambda (file)
+      (let ((org-roam-graph-viewer "/Applications/Arc.app/Contents/MacOS/Arc"))
+        (org-roam-graph--open (concat "file://" file)))))
+#+end_src
+
+#+RESULTS:
+| lambda | (file) | (let ((org-roam-graph-viewer /Applications/Arc.app/Contents/MacOS/Arc)) (org-roam-graph--open (concat file:/wsl$/Ubuntu file))) |
+
+*** Org-roam-ui
+#+begin_src emacs-lisp
+(use-package org-roam-ui
+    :after org-roam
+;;         normally we'd recommend hooking orui after org-roam, but since org-roam does not have
+;;         a hookable mode anymore, you're advised to pick something yourself
+;;         if you don't care about startup time, use
+;;  :hook (after-init . org-roam-ui-mode)
+    :config
+    (setq org-roam-ui-sync-theme t
+          org-roam-ui-follow t
+          org-roam-ui-update-on-save t
+          org-roam-ui-open-on-start t))
+#+end_src
 ** Org-protocol
 First configuring ~org-protocol~ and download [[https://github.com/sprig/org-capture-extension][chrome extension]].
 
@@ -944,15 +970,14 @@ Then configuring capture template accordingly
 	)
 
 (setq org-capture-templates '(
-															("p" "Protocol" entry (file+headline "~/captures.org" "Inbox")
+															("p" "Protocol" entry (file+headline "~/Notes/captures.org" "Inbox")
 															 "* %^{Title}\nSource: %u, %c\n #+BEGIN_QUOTE\n%i\n#+END_QUOTE\n\n\n%?")	
-															("L" "Protocol Link" entry (file+headline "~/captures.org" "Link")
+															("L" "Protocol Link" entry (file+headline "~/Notes/captures.org" "Link")
 															 "* %? [[%:link][%(transform-square-brackets-to-round-ones \"%:description\")]]\n")
 															))
-#+end_src
 
-#+RESULTS:
-| p | Protocol | entry | (file+headline ~/captures.org Inbox) | * %^{Title} |
+(global-set-key (kbd "C-c c") 'org-capture)
+#+end_src
 
 *** CANCELED Org-protocol-capture-html                    :ARCHIVE:@download:
 CLOSED: [2022-11-05 Sat 01:55]
@@ -964,6 +989,51 @@ CLOSED: [2022-11-05 Sat 01:55]
 	I have configurated the org protocol but I don't think changing a html
 	to md is needed...
 :END:
+** Agenda
+*** Basic Setup
+#+begin_src emacs-lisp
+(setq org-agenda-files (list "~/Notes/Agenda/dailylife.org"
+														 "~/.dotfiles/Emacs.org"
+														 "~/Notes/blogideas.org"
+														 "~/Notes/Questions.org"))
+;;Add progress logging to the org-agenda file
+(setq org-log-done 'note)
+
+;;Add some captures related to agenda
+(add-to-list 'org-capture-templates '("t" "Todo" entry (file+headline "~/Notes/Agenda/dailylife.org" "Task")
+																			 "* TODO %?\n %i\n"))
+
+(add-to-list 'org-capture-templates '("b" "Blog Idea" plain 
+																			 (file+headline "~/Notes/blogideas.org" "Inbox")
+																			 (file "~/Notes/RoamNotes/Templates/blog_temp.org")
+																			))
+
+(message "the org-capture updated")
+#+end_src
+
+*** Super-agenda
+#+begin_src emacs-lisp
+(use-package org-ql)
+(use-package org-super-agenda)
+
+(setq org-super-agenda-groups
+			'(
+				(:name "Research"
+							 :tag "research")
+				(:name "Questions to answer"
+							 :todo "QUE")
+				(:name "Project"
+							 :children t)))
+#+end_src
+
+
+**** DONE Config super-agenda according to [[https://github.com/alphapapa/org-super-agenda#screenshots][git repo]] to make it looks nicer. :ARCHIVE:@emacs:@review:
+CLOSED: [2022-11-09 Wed 01:28]
+- State "DONE"       from "REVIEW"     [2022-11-09 Wed 01:28] \\
+	Basic configuration is working, will dig into it later.
+#+begin_src emacs-lisp
+(use-package org-super-agenda)
+#+end_src
 ** Html or Markdown Preview
 *** ~.html~ preview
 [[https://github.com/jakebox/org-preview-html][GitHub Repo]]
@@ -986,76 +1056,16 @@ CLOSED: [2022-11-05 Sat 01:55]
 #+end_src
 
 #+RESULTS:
-** Org-Brain
-[[https://github.com/Kungsgeten/org-brain][More Setting Availiable in GitRepo]]
-
-#+begin_src emacs-lisp
-(use-package org-brain
-  :ensure t
-  :init
-  (setq org-brain-path "~/Notes/Brain")
-  :config
-  (bind-key "C-c b" "~/Notes")
-  (setq org-id-track-globally t)
-  (setq org-id-locations-file "~/.emacs.d/.org-id-locations")
-  (add-hook 'before-save-hook 'org-brain-ensure-ids-in-buffer)
-  (setq org-brain-visualize-default-choices 'all)
-  (setq org-brain-title-max-length 12)
-  (setq org-brain-include-file-entries nil
-	org-brain-file-entries-use-title nil))
-
-;; Allows you to edit entries directly from org-brain-visualize
-(use-package polymode
-  :config
-  (add-hook 'org-brain-visualize-mode-hook #'org-brain-polymode))
-#+end_src
-
-#+RESULTS:
-: t
-
 ** For File navigation
-Deft is an Emacs mode for quickly browsing, filtering and editing
-directories of plain text notes. *This package can't search inside content somehow...*
-  #+begin_src emacs-lisp
-    (use-package deft
-      :commands (deft)
-      :config (setq deft-directory "~/Notes"
-		    deft-recursive t
-		    deft-extensions '("md" "org" "txt"))
-      :bind
-      ("C-c n d" . deft)
-      :custom
-      (deft-recursive t)
-      (deft-use-filter-string-for-filename t)
-      (deft-default-extension "org")
-      (deft-directory org-roam-directory))
-  #+end_src
 
 I saw good reviews of deadgrep the other day so want to give it a
-try... ( but I don't know how to use this yet)
+try... ( but I don't know how to use this yet )
 
 #+begin_src emacs-lisp
 (use-package deadgrep)
-(global-set-key (kbd "<f2>") #'deadgrep)
+(global-set-key (kbd "C-c n d") #'deadgrep)
 #+end_src
 
-#+RESULTS:
-: deadgrep
-
-** Agenda
-#+begin_src emacs-lisp
-(setq org-agenda-files (list "~/Notes/Agenda/dailylife.org"
-														 "~/.dotfiles/Emacs.org"))
-;;Add progress logging to the org-agenda file
-(setq org-log-done 'note)
-#+end_src
-
-*** Super-agenda
-**** REVIEW Config super-agenda according to [[https://github.com/alphapapa/org-super-agenda#screenshots][git repo]] to make it looks nicer. :@emacs:@review:
-CLOSED: [2022-11-03 Thu 20:59]
-#+begin_src emacs-lisp
-(use-package org-super-agenda)
-#+end_src
 ** ONWATCH CV with Org-mode                                :@download:@emacs:
 link: [[https://github.com/zzamboni/vita/]]
 * Editor
@@ -1063,99 +1073,77 @@ link: [[https://github.com/zzamboni/vita/]]
 *** Ivy and counsel
    #+begin_src emacs-lisp
 
-(use-package ivy
-  :diminish
-  :bind (("C-s" . swiper)
-         :map ivy-minibuffer-map
-         ("TAB" . ivy-alt-done)
-         ("C-l" . ivy-alt-done)
-         ("C-j" . ivy-next-line)
-         ("C-k" . ivy-previous-line)
-         :map ivy-switch-buffer-map
-         ("C-k" . ivy-previous-line)
-         ("C-l" . ivy-done)
-         ("C-d" . ivy-switch-buffer-kill)
-         :map ivy-reverse-i-search-map
-         ("C-k" . ivy-previous-line)
-         ("C-d" . ivy-reverse-i-search-kill))
-  :config
-  (ivy-mode 1))
+	 (use-package ivy
+		 :diminish
+		 :bind (("C-s" . swiper)
+						("C-M-j" . ivy-immediate-done)
+						:map ivy-minibuffer-map
+						("TAB" . ivy-alt-done)
+						("C-l" . ivy-alt-done)
+						("C-j" . ivy-next-line)
+						("C-k" . ivy-previous-line)
+						:map ivy-switch-buffer-map
+						("C-k" . ivy-previous-line)
+						("C-l" . ivy-done)
+						("C-d" . ivy-switch-buffer-kill)
+						:map ivy-reverse-i-search-map
+						("C-k" . ivy-previous-line)
+						("C-d" . ivy-reverse-i-search-kill))
+		 :config
+		 (ivy-mode 1))
 
-(use-package ivy-rich
-  :init
-  (ivy-rich-mode 1))
+	 (use-package ivy-rich
+		 :init
+		 (ivy-rich-mode 1))
 
-(use-package counsel
-  :bind (("C-M-j" . 'counsel-switch-buffer)
-         :map minibuffer-local-map
-         ("C-r" . 'counsel-minibuffer-history))
-  :config
-  (counsel-mode 1))
+	 (use-package counsel
+		 :bind (:map minibuffer-local-map
+						("C-r" . 'counsel-minibuffer-history))
+		 :config
+		 (counsel-mode 1))
    #+end_src
 
-	 #+RESULTS:
-	 : counsel-minibuffer-history
 
-
-counsel, ivy and swiper usually come tgh, and is a useful completion framework.
+Swiper makes in-files search easier:
   #+begin_src emacs-lisp
-(use-package swiper
-  :ensure try
-  :config
-  (progn
-    (ivy-mode)
-    (setq ivy-use-virtual-buffers t)
-    (setq enable-recursive-minibuffers t)
-    ;; enable this if you want `swiper' to use it
-    ;; (setq search-default-mode #'char-fold-to-regexp)
-    (global-set-key "\C-s" 'swiper)
-    (global-set-key (kbd "C-c C-r") 'ivy-resume)
-    (global-set-key (kbd "<f6>") 'ivy-resume)
-    (global-set-key (kbd "M-x") 'counsel-M-x)
-    (global-set-key (kbd "C-x C-f") 'counsel-find-file)
-    (global-set-key (kbd "<f1> f") 'counsel-describe-function)
-    (global-set-key (kbd "<f1> v") 'counsel-describe-variable)
-    (global-set-key (kbd "<f1> o") 'counsel-describe-symbol)
-    (global-set-key (kbd "<f1> l") 'counsel-find-library)
-    (global-set-key (kbd "<f2> i") 'counsel-info-lookup-symbol)
-    (global-set-key (kbd "<f2> u") 'counsel-unicode-char)
-    (global-set-key (kbd "C-c g") 'counsel-git)
-    (global-set-key (kbd "C-c j") 'counsel-git-grep)
-    (global-set-key (kbd "C-c k") 'counsel-ag)
-    (global-set-key (kbd "C-x l") 'counsel-locate)
-    (global-set-key (kbd "C-S-o") 'counsel-rhythmbox)
-    (define-key minibuffer-local-map (kbd "C-r") 'counsel-minibuffer-history)
-    ))
+	(use-package swiper
+		:config
+			(ivy-mode)
+			(setq ivy-use-virtual-buffers t)
+			(setq enable-recursive-minibuffers t)
+			;; enable this if you want `swiper' to use it
+			;; (setq search-default-mode #'char-fold-to-regexp)
+			:bind
+			("\C-s" . swiper)
+			("C-c C-r" . ivy-resume)
+			("M-x" . counsel-M-x))
 
 
   #+end_src
-
-	#+RESULTS:
-	: t
 
 *** Vertico
 
    light-weighted, integrating with built in emacs completion engine
 
      #+begin_src emacs-lisp
-					 (use-package vertico
+		 (use-package vertico
 			 :ensure t
 			 :bind (:map vertico-map
-				("C-j" . vertico-next)
-				("C-k" . vertico-previous)
-				("C-f" . vertico-exit)
-				:map minibuffer-local-map
-				("M-h" . backward-kill-word))
+									 ("C-j" . vertico-next)
+									 ("C-k" . vertico-previous)
+									 ("C-f" . vertico-exit)
+									 :map minibuffer-local-map
+									 ("M-h" . backward-kill-word))
 			 :custom
 			 (vertico-cycle t)
 			 :init
 			 (vertico-mode))
 
-					 (use-package savehist
+		 (use-package savehist
 			 :init
 			 (savehist-mode))
 
-					 (use-package marginalia
+		 (use-package marginalia
 			 :after vertico
 			 :ensure t
 			 :custom
@@ -1163,8 +1151,6 @@ counsel, ivy and swiper usually come tgh, and is a useful completion framework.
 			 :init
 			 (marginalia-mode))
      #+end_src
-
-		 #+RESULTS:
 
 *** Avy - jump to a word 
 
@@ -1209,6 +1195,36 @@ in the same way, with visual feedback as you type.
 (use-package iedit)
 #+end_src
 
+*** (experiment)Blink
+[[https://github.com/manateelazycat/blink-search][see repo]]
+#+begin_src emacs-lisp
+(add-to-list 'load-path "~/.dotfiles/.files/.emacs.d/blink-search")
+(require 'blink-search)
+#+end_src
+
+*** Smartparens (auto-completing brakets)
+#+begin_src emacs-lisp
+(use-package smartparens)
+(smartparens-global-mode t)
+#+end_src
+
+*** Company (in conjunction with org-roam)
+#+begin_src emacs-lisp
+(use-package company
+	:ensure t
+	:after org-roam
+	:config
+	(add-hook 'after-init-hook 'global-company-mode)
+	(setq company-minimum-prefix-length 2)
+	(setq company-idle-delay 0.25)
+	:bind 
+		(:map company-active-map
+			("C-n" . company-select-next)
+			("C-p" . company-select-previous)))
+
+(setq company-backends '(company-capf))
+#+end_src
+
 ** Flycheck
   #+BEGIN_SRC emacs-lisp
     (use-package flycheck
@@ -1217,24 +1233,7 @@ in the same way, with visual feedback as you type.
       (global-flycheck-mode t))
 #+END_SRC
 
-#+RESULTS:
-
-** Spellcheck
-#+begin_src emacs-lisp
-(use-package flyspell)
-(use-package flyspell-correct
-  :after flyspell
-  :bind (:map flyspell-mode-map ("C-c ;" . flyspell-correct-wrapper)))
-
-(use-package flyspell-correct-ivy
-  :after flyspell-correct)
-
-#+end_src
-
-#+RESULTS:
-
 ** Grammar Check
-
 #+begin_src emacs-lisp
 (use-package lsp-grammarly
   :hook (text-mode . (lambda ()
@@ -1336,20 +1335,17 @@ link:[[https://github.com/emacs-grammarly/lsp-grammarly]]
 																		 ("mkv" . "mpv"))))
    #+end_src
 
-	 #+RESULTS:
-	 : t
+** Magit
+#+begin_src emacs-lisp
+(use-package magit)
+#+end_src
 * Export
 ** Blogging with ox-hugo
   #+begin_src emacs-lisp
-(use-package ox-hugo
-  :ensure t            ;Auto-install the package from Melpa (optional)
+(use-package ox-hugo         
   :after ox)
-
 (setq org-export-with-broken-links t)
   #+end_src
-
-	#+RESULTS:
-	: t
 
 * Keep .emacs.d clean
   #+begin_src emacs-lisp
@@ -1382,19 +1378,8 @@ link:[[https://github.com/emacs-grammarly/lsp-grammarly]]
 #+end_src
 
 * Personal Setting
-** dotcrafter
-
-#+begin_src emacs-lisp
-
-;; (load-file "/Users/zhouqiaohui/.dotfiles/.files/.emacs.d/dotcrafter.el")
-;; (require 'dotcrafter)
-
-#+end_src
-
-#+RESULTS:
-
 ** helper function
-
+*** Open configuration file
 To quickly open my configuration org file. I have a alias setting in
 my zshconfig too named ~emacsconfig~ which opens my ~init.el~ in VsCode,
 allowing me to quickly edit my init files to open emacs correctly (I
@@ -1406,21 +1391,20 @@ am very bad at debug in emacs and I personally find this way easier).
 	(interactive)
 	(switch-to-buffer (find-file-noselect "~/.dotfiles/Emacs.org")))
 #+end_src
-
+*** Open bookmark capture
 Open captured information from browser:
-
 #+begin_src emacs-lisp
 (defun joz/mycapture ()
 	"Open my captued info from interent"
 	(interactive)
-	(switch-to-buffer (find-file-noselect "~/captures.org")))
-
+	(switch-to-buffer (find-file-noselect "~/Notes/captures.org")))
 #+end_src
 * Footnotes
 [fn:1] ~#'foo~ and ~'foo~ are equivalent when ~foo~ is a symbol, but the
 former is prefered when ~foo~ is a function. ~#'~ is intended to be a
 function call. [[https://emacs.stackexchange.com/a/10943/36783][More explanations here.]]
-* COMMENT Local Variables                          :ARCHIVE:
+
+* COMMENT Local Variables                                           :ARCHIVE:
 # Local Variables:
 # eval: (org-hugo-auto-export-mode)
 # End:
