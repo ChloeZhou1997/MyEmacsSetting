@@ -1,15 +1,16 @@
 #+STARTUP: content
 #+SEQ_TODO: TODO(t) ONWATCH(o@/!) REVIEW(r@/!) | DONE(d@/!) CANCELLED(c@/!)
 #+TAGS: download(p) emacs(e) review(r) design(d)
-#+PROPERTY: header-args :emacs-lisp :tangle ~/.dotfiles/.files/.emacs.d/init.el
-#+TITLE: Emacs Configuration
+#+PROPERTY: header-args :emacs-lisp :tangle ~/.dotfiles/.files/.emacs.d/init_new.el
+
+#+TITLE: Emacs Configuration_new
 #+AUTHOR: Chloe
 #+DATE: 2022-10-29
 #+HUGO_SECTION: posts
 #+HUGO_BASE_DIR:~/Blog
 #+HUGO_TAGS: emacs config
 #+hugo_weight: auto
-#+HUGO_DRAFT: false
+#+HUGO_DRAFT: true
 #+hugo_auto_set_lastmod: t
 
 Rewrite my config to get rid of the redunant functions and build the
@@ -153,7 +154,7 @@ Auto-revert, save history etc to improve general usage
 (save-place-mode 1)
 
 ;; Turn on auto-fill-mode so the paragraph doesn't get super long
-(add-hook 'org-mode-hook 'turn-on-auto-fill)
+(auto-fill-mode 1)
 
 ;; Turn of the electric indent mode
 (electric-indent-mode -1)
@@ -258,7 +259,7 @@ Define a ~font-setup~ function
 	(set-face-attribute 'org-meta-line nil :inherit '(font-lock-comment-face fixed-pitch))
 	(set-face-attribute 'org-checkbox nil :inherit 'fixed-pitch))
 
-;; (add-hook 'org-mode-hook 'org-font-setup)
+(add-hook 'org-mode-hook 'org-font-setup)
 #+end_src
 
 **** Beautify
@@ -322,52 +323,48 @@ Also, use ~doom-modeline~ to prettify the mode-line section
 *** Vertico
 Minimalistic auto completion setting: ~vertico~ + ~savehist~ + ~marginalia~
 #+begin_src emacs-lisp
-;;enable Vertico
-(use-package vertico
-	:init
-	(vertico-mode)
+	;;enable Vertico
+	(use-package vertico
+		:init
+		(vertico-mode)
 
-	;; Different scroll margin
-	;; (setq vertico-scroll-margin 0)
+		;; Different scroll margin
+		;; (setq vertico-scroll-margin 0)
 
-	;; Show more candidates
-	;; (setq vertico-count 20)
+		;; Show more candidates
+		;; (setq vertico-count 20)
 
-	;; Grow and shrink the Vertico minibuffer
-	;; (setq vertico-resize t)
+		;; Grow and shrink the Vertico minibuffer
+		;; (setq vertico-resize t)
 
-	;; Optionally enable cycling for `vertico-next' and `vertico-previous'.
-	;; (setq vertico-cycle t)
-	)
+		;; Optionally enable cycling for `vertico-next' and `vertico-previous'.
+		;; (setq vertico-cycle t)
+		)
 
-(define-key vertico-map "?" #'minibuffer-completion-help)
-(define-key vertico-map (kbd "M-RET") #'minibuffer-force-complete)
-(define-key vertico-map (kbd "M-TAB") #'minibuffer-complete)
+	;; Persist history over Emacs restarts. Vertico sorts by history position.
+	(use-package savehist
+		:init
+		(savehist-mode))
 
-;; Persist history over Emacs restarts. Vertico sorts by history position.
-(use-package savehist
-	:init
-	(savehist-mode))
+	;; Show info of files at the marginal
+	(use-package marginalia
+		:after vertico
+		:ensure t
+		:custom
+		(marginalia-annotators '(marginalia-annotators-heavy marginalia-annotators-light nil))
+		:init
+		(marginalia-mode))
 
-;; Show info of files at the marginal
-(use-package marginalia
-	:after vertico
-	:ensure t
-	:custom
-	(marginalia-annotators '(marginalia-annotators-heavy marginalia-annotators-light nil))
-	:init
-	(marginalia-mode))
-
-;; Optionally use the `orderless' completion style, so no need to worry about the
-;; order of keywords when trying to search for command.
-(use-package orderless
-	:init
-	;; Configure a custom style dispatcher (see the Consult wiki)
-	;; (setq orderless-style-dispatchers '(+orderless-dispatch)
-	;;       orderless-component-separator #'orderless-escapable-split-on-space)
-	(setq completion-styles '(orderless basic)
-				completion-category-defaults nil
-				completion-category-overrides '((file (styles partial-completion)))))
+	;; Optionally use the `orderless' completion style, so no need to worry about the
+	;; order of keywords when trying to search for command.
+	(use-package orderless
+		:init
+		;; Configure a custom style dispatcher (see the Consult wiki)
+		;; (setq orderless-style-dispatchers '(+orderless-dispatch)
+		;;       orderless-component-separator #'orderless-escapable-split-on-space)
+		(setq completion-styles '(orderless basic)
+					completion-category-defaults nil
+					completion-category-overrides '((file (styles partial-completion)))))
 #+end_src
 
 *** Company
@@ -436,22 +433,6 @@ The basic expansion comes in handy by using ~org-tempo~
 		("C-=" . er/expand-region))
 #+end_src
 
-** Snippet
-#+begin_src emacs-lisp
-(defun my-org-mode-hook ()
-  (setq-local yas-buffer-local-condition
-							'(not (org-in-src-block-p t))))
-
-(use-package yasnippet
-	:init
-	(yas-global-mode 1)
-	:bind
-	("\C-o" . yas-expand)
-	:config
-	(add-hook 'org-mode-hook 'my-org-mode-hook))
-
-(use-package yasnippet-snippets)
-#+end_src
 * Org-roam
 ** Basic config
 The straight version of org is not working, using straight to make sure using the built-in version
@@ -459,14 +440,7 @@ The straight version of org is not working, using straight to make sure using th
 (use-package org
 	:straight (
 		org :type built-in
-	)
-	:mode ("\\.org" . org-mode)
-	:hook ((org-mode . org-font-setup)
-				 (org-mode . turn-on-visual-line-mode))
-	:bind
-	("C-c a" . org-agenda)
-	("C-c l"   . 'org-store-link)
-	("C-c C-l"  . 'org-insert-link))
+	))
 #+end_src
 
 #+begin_src emacs-lisp
@@ -642,12 +616,15 @@ For the PDF Scrapper, change the formate of the paper key:
    (mapcar #'(lambda (c) (if (equal c ?[) ?\( (if (equal c ?]) ?\) c))) string-to-transform))
 	)
 
+(setq org-capture-templates '(
+															("p" "Protocol" entry (file+headline "~/Notes/captures.org" "Inbox")
+															 "* %^{Title}\nSource: %u, %c\n #+BEGIN_QUOTE\n%i\n#+END_QUOTE\n\n\n%?")	
+															("L" "Protocol Link" entry (file+headline "~/Notes/captures.org" "Link")
+															 "* %? [[%:link][%(transform-square-brackets-to-round-ones \"%:description\")]]\n")
+															))
+
 (global-set-key (kbd "C-c c") 'org-capture)
 #+end_src
-
-#+RESULTS:
-: org-capture
-
 * Agenda
 ** Basic Setup
 #+begin_src emacs-lisp
@@ -659,25 +636,14 @@ For the PDF Scrapper, change the formate of the paper key:
 ;;Add progress logging to the org-agenda file
 (setq org-log-done 'note)
 
-;;Add captures template
-(setq org-capture-templates '(
-															("p" "Protocol" entry 
-															 (file+headline "~/Notes/captures.org" "Inbox")
-															 "* %^{Title}\nSource: %u, %c\n #+BEGIN_QUOTE\n%i\n#+END_QUOTE\n\n\n%?")	
-															("L" "Protocol Link" entry 
-															 (file+headline "~/Notes/captures.org" "Link")
-															 "* %? [[%:link][%(transform-square-brackets-to-round-ones \"%:description\")]]\n")
-															("t" "Todo" entry 
-															 (file+headline "~/Notes/Agenda/dailylife.org" "Task")
-															 "* TODO %?\n %i\n")
-															("b" "Blog Idea" plain 
-															 (file+headline "~/Notes/blogideas.org" "Inbox")
-															 (file "~/Notes/RoamNotes/Templates/blog_temp.org")
-															 )
-															("f" "emacs problem" plain 
-															 (file+headline "~/Notes/captures.org" "Emacs Problems")
-															 "- [ ] %?\n")
-															))
+;;Add some captures related to agenda
+(add-to-list 'org-capture-templates '("t" "Todo" entry (file+headline "~/Notes/Agenda/dailylife.org" "Task")
+																			 "* TODO %?\n %i\n"))
+
+(add-to-list 'org-capture-templates '("b" "Blog Idea" plain 
+																			 (file+headline "~/Notes/blogideas.org" "Inbox")
+																			 (file "~/Notes/RoamNotes/Templates/blog_temp.org")
+																			))
 
 ;;set todo keywords
 (setq org-todo-keywords
@@ -711,154 +677,15 @@ For the PDF Scrapper, change the formate of the paper key:
 				(:name "Project"
 							 :children t)))
 #+end_src
-* Editing
-** Grammar Check
-#+begin_src emacs-lisp
-(use-package lsp-grammarly
-  :hook (text-mode . (lambda ()
-                       (require 'lsp-grammarly)
-                       (lsp))))  ; or lsp-deferred
-#+end_src
-** Syntax Highlighting
-   #+begin_src emacs-lisp
-     (use-package rainbow-delimiters
-       :hook (prog-mode . rainbow-delimiters-mode))
-   #+end_src
-** Undo Tree
- #+begin_src emacs-lisp
-      (use-package undo-tree
-      :ensure t
-      :init
-      (global-undo-tree-mode))
- #+end_src
-
- #+RESULTS:
-** Magit
-#+begin_src emacs-lisp
-(use-package magit)
-#+end_src
-* Others
-** Terminal
-*** Eshell
-
-   #+begin_src emacs-lisp
-
-     (use-package eshell-git-prompt)
-     (use-package eshell
-
-     :config
-     (eshell-git-prompt-use-theme 'powerline))
-   #+end_src
-** Dired
-   #+begin_src emacs-lisp
-
-		 (use-package all-the-icons-dired)
-		 (use-package dired-rainbow
-			 :defer 2
-			 :config
-			 (dired-rainbow-define-chmod directory "#6cb2eb" "d.*")
-			 (dired-rainbow-define html "#eb5286" ("css" "less" "sass" "scss" "htm" "html" "jhtm" "mht" "eml" "mustache" "xhtml"))
-			 (dired-rainbow-define xml "#f2d024" ("xml" "xsd" "xsl" "xslt" "wsdl" "bib" "json" "msg" "pgn" "rss" "yaml" "yml" "rdata"))
-			 (dired-rainbow-define document "#9561e2" ("docm" "doc" "docx" "odb" "odt" "pdb" "pdf" "ps" "rtf" "djvu" "epub" "odp" "ppt" "pptx"))
-			 (dired-rainbow-define markdown "#ffed4a" ("org" "etx" "info" "markdown" "md" "mkd" "nfo" "pod" "rst" "tex" "textfile" "txt"))
-			 (dired-rainbow-define database "#6574cd" ("xlsx" "xls" "csv" "accdb" "db" "mdb" "sqlite" "nc"))
-			 (dired-rainbow-define media "#de751f" ("mp3" "mp4" "mkv" "MP3" "MP4" "avi" "mpeg" "mpg" "flv" "ogg" "mov" "mid" "midi" "wav" "aiff" "flac"))
-			 (dired-rainbow-define image "#f66d9b" ("tiff" "tif" "cdr" "gif" "ico" "jpeg" "jpg" "png" "psd" "eps" "svg"))
-			 (dired-rainbow-define log "#c17d11" ("log"))
-			 (dired-rainbow-define shell "#f6993f" ("awk" "bash" "bat" "sed" "sh" "zsh" "vim"))
-			 (dired-rainbow-define interpreted "#38c172" ("py" "ipynb" "rb" "pl" "t" "msql" "mysql" "pgsql" "sql" "r" "clj" "cljs" "scala" "js"))
-			 (dired-rainbow-define compiled "#4dc0b5" ("asm" "cl" "lisp" "el" "c" "h" "c++" "h++" "hpp" "hxx" "m" "cc" "cs" "cp" "cpp" "go" "f" "for" "ftn" "f90" "f95" "f03" "f08" "s" "rs" "hi" "hs" "pyc" ".java"))
-			 (dired-rainbow-define executable "#8cc4ff" ("exe" "msi"))
-			 (dired-rainbow-define compressed "#51d88a" ("7z" "zip" "bz2" "tgz" "txz" "gz" "xz" "z" "Z" "jar" "war" "ear" "rar" "sar" "xpi" "apk" "xz" "tar"))
-			 (dired-rainbow-define packaged "#faad63" ("deb" "rpm" "apk" "jad" "jar" "cab" "pak" "pk3" "vdf" "vpk" "bsp"))
-			 (dired-rainbow-define encrypted "#ffed4a" ("gpg" "pgp" "asc" "bfe" "enc" "signature" "sig" "p12" "pem"))
-			 (dired-rainbow-define fonts "#6cb2eb" ("afm" "fon" "fnt" "pfb" "pfm" "ttf" "otf"))
-			 (dired-rainbow-define partition "#e3342f" ("dmg" "iso" "bin" "nrg" "qcow" "toast" "vcd" "vmdk" "bak"))
-			 (dired-rainbow-define vc "#0074d9" ("git" "gitignore" "gitattributes" "gitmodules"))
-			 (dired-rainbow-define-chmod executable-unix "#38c172" "-.*x.*"))
-
-		 (use-package dired-single
-			 :defer t)
-
-		 (use-package dired-ranger
-			 :defer t)
-
-		 (use-package dired-collapse
-			 :defer t)
-
-
-		 (use-package dired-single)
-
-		 (use-package all-the-icons-dired
-			 :hook (dired-mode . all-the-icons-dired-mode))
-
-		 (use-package dired-open
-			 :config
-			 ;; Doesn't work as expected!
-			 ;;(add-to-list 'dired-open-functions #'dired-open-xdg t)
-			 (setq dired-open-extensions '(("png" . "feh")
-																		 ("mkv" . "mpv"))))
-   #+end_src
-** Obsidian
-#+begin_src emacs-lisp
-(use-package obsidian
-  :demand t
-  :config
-  (obsidian-specify-path "~/Library/Mobile Documents/com~apple~CloudDocs/Obsidian/Research")
-  (global-obsidian-mode t)
-  :custom
-  ;; This directory will be used for `obsidian-capture' if set.
-  (obsidian-inbox-directory "Inbox")
-  :bind (:map obsidian-mode-map
-  ;; Replace C-c C-o with Obsidian.el's implementation. It's ok to use another key binding.
-  ("C-c C-o" . obsidian-follow-link-at-point)
-  ;; Jump to backlinks
-  ("C-c C-b" . obsidian-backlink-jump)
-  ;; If you prefer you can use `obsidian-insert-link'
-  ("C-c C-l" . obsidian-insert-wikilink)))
-#+end_src
-link: [[https://github.com/zzamboni/vita/]]
-** For File navigation
-#+begin_src emacs-lisp
-(use-package deadgrep
-	:bind 
-	("C-c n d" . deadgrep))
-#+end_src
-* Export
-** Blogging with ox-hugo
-  #+begin_src emacs-lisp
-(use-package ox-hugo         
-  :after ox)
-(setq org-export-with-broken-links t)
-  #+end_src
-** ONWATCH CV with Org-mode                                :download:emacs:
-* Keep .emacs.d clean
-  #+begin_src emacs-lisp
-    ;; Change the user-emacs-directory to keep unwanted things out of ~/.emacs.d
-    (setq user-emacs-directory (expand-file-name "~/.cache/emacs/")
-	  url-history-file (expand-file-name "url/history" user-emacs-directory))
-
-    ;; Use no-littering to automatically set common paths to the new user-emacs-directory
-    (use-package no-littering)
-
-    ;; Keep customization settings in a temporary file (thanks Ambrevar!)
-    (setq custom-file
-	  (if (boundp 'server-socket-dir)
-	      (expand-file-name "custom.el" server-socket-dir)
-	    (expand-file-name (format "emacs-custom-%s.el" (user-uid)) temporary-file-directory)))
-    (load custom-file t)
-  #+end_src
-
-	#+RESULTS:
-	: t
 * Auto Tangle
 #+begin_src emacs-lisp
   (defun joz/org-babel-tangle-config ()
     (when (string-equal (buffer-file-name)
-			(expand-file-name "~/.dotfiles/Emacs.org"))
+			(expand-file-name "~/.dotfiles/Emacs_new.org"))
     (let ((org-confim-babel-evaluate t))
       (org-babel-tangle))))
 #+end_src
+
 * Personal Setting
 ** helper function
 *** Open configuration file
